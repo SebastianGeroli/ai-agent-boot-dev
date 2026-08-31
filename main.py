@@ -21,6 +21,12 @@ def main():
         }
     ],
     )
+    if response.usage is None:
+        raise RuntimeError("Failed to obtain a response")
+    prompt_tokens = response.usage.prompt_tokens
+    completion_tokens = response.usage.completion_tokens
+    print(f"Prompt tokens: {prompt_tokens}")
+    print(f"Response tokens: {completion_tokens}")
     print(response.choices[0].message.content)
     
 
