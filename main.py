@@ -1,7 +1,10 @@
 import os
 import argparse
+import json
 from dotenv import load_dotenv
 from openai import OpenAI
+from prompts import system_prompt
+from call_function import available_functions
 
 
 def main():
@@ -14,6 +17,7 @@ def main():
     if api_key == None:
         raise RuntimeError("API KEY NOT FOUND")
     messages=[
+            {"role": "system", "content": system_prompt},
             { "role": "user", "content": args.user_prompt},
         ]
     client = OpenAI(
@@ -21,21 +25,27 @@ def main():
     api_key=api_key,
     )
     response = client.chat.completions.create(
-    model="openrouter/free",
-    messages = messages,
+        model="openrouter/free",
+        messages = messages,
+        tools=available_functions,
     )
     if response.usage is None:
         raise RuntimeError("Failed to obtain a response")
     prompt_tokens = response.usage.prompt_tokens
     completion_tokens = response.usage.completion_tokens
+
     if args.verbose:
         print(f"User prompt: {args.user_prompt}")
         print(f"Prompt tokens: {prompt_tokens}")
         print(f"Response tokens: {completion_tokens}")
-    print(response.choices[0].message.content)
-    
-    
 
+    message = response.choices[0].message 
+    if message.tool_calls:
+        for tool_call in message.tool_calls:
+            function_args = json.loads(tool_call.function.arguments or "{}") # type: ignore
+            print(f"Calling function: {tool_call.function.name}({function_args})") # type: ignore
+    else:
+        print(message.content)
 
 if __name__ == "__main__":
     main()
